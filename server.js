@@ -42,6 +42,7 @@ let upload = multer( {
 
 // route for file upload
 app.post( '/uploads', ( req, res ) => {
+  // there was a syntax error here: err is a anonymous function arg, not upload() arg.
   upload( req, res, (err) => {
     console.log(req.body);
     console.log(req.file);

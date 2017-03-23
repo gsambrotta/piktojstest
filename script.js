@@ -29,6 +29,17 @@ jQuery.noConflict();
         loadingIcon.removeClass('loading-icon');
         data.forEach(function(imgLink, i){
           $('#imageList').append('<li><img src="'+ imgLink +'" id="dragImg'+ i +'" class="img-rounded dragEl" draggable="true" /></li>');
+
+          // Add dragstart event to dinamycally created images
+          // NOTE: If i would have time, i would probably do this is a better way.
+          // I would probably abstact the 'dragstart' eventListener function and then call in app.text.createText
+          // and app.dragAndDrop.init with .bind()
+          var dragEl = document.querySelectorAll('.dragEl');
+          for( var i = 0; i < dragEl.length; i++){
+            dragEl[i].addEventListener('dragstart', function(evt){
+              app.dragAndDrop.drag(evt);
+            });
+          }
         })
 
         if(cb) {
@@ -43,7 +54,7 @@ jQuery.noConflict();
   //Syntax Note: app.sectionName.functionName = function(args)
   app.upload = { //examples
 
-    uploadNewImg : (btn, newImgs) => {
+    uploadNewImg : (btn, newImgs, formData) => {
       // Validate file: empty, image's format, size
       if (newImgs.length === 0){
         $('.upload-error').text('You must upload an image before submit it.');
@@ -66,23 +77,18 @@ jQuery.noConflict();
         reader.readAsDataURL(newImgs[0]);
 
         // Post image to server
-        console.log(newImgs);
-        var formData = new FormData();
-        formData.append('uploads', $('#fileSelect')[0].files[0]);
         $.ajax({
           method: 'POST',
           url: '/uploads',
           data: formData,
           contentType: false,
           processData: false,
-          enctype: 'multipart/form-data',
         })
         .fail( function() {
           $('.upload-error').text('There was an error uploading your image, please try again later.');
 
           // Delete the new uploaded img form the image list
           $('.temporary').remove();
-          console.log('Error!');
         })
         .done( function(data) {
           $('.upload-error').text('');
@@ -90,21 +96,20 @@ jQuery.noConflict();
           // empty img list and repopulate with new fetched images
           $('#imageList').empty();
           app.materials.getImages();
-
-          console.log('img saved');
         });
       }
     },
 
     init : () => {
       // trigger submit event and call func to upload to server
-      $('#submit').on('click', function(evt){
+      $('form').on('submit', function(evt){
+        var formData = new FormData($(this)[0]);
         var fileEl = document.getElementById('fileSelect');
         var files = fileEl.files;
         evt.preventDefault();
 
-        app.upload.uploadNewImg(this, files);
-      });
+        app.upload.uploadNewImg(this, files, formData);
+      })
     }
   }
 
