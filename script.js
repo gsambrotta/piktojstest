@@ -28,7 +28,7 @@ jQuery.noConflict();
       .done( function(data) {
         loadingIcon.removeClass('loading-icon');
         data.forEach(function(imgLink, i){
-          $('#imageList').append('<li><img src="'+ imgLink +'" id="dragImg'+ i +'" class="img-rounded dragImg" draggable="true" /></li>');
+          $('#imageList').append('<li><img src="'+ imgLink +'" id="dragImg'+ i +'" class="img-rounded dragEl" draggable="true" /></li>');
         })
 
         if(cb) {
@@ -58,7 +58,7 @@ jQuery.noConflict();
         return;
 
       } else {
-        // Pre-display the image in the list to have a early user's feedback.
+        // Pre-display the image in the list to have early feedback for users.
         var reader = new FileReader();
         reader.onload = (e) => {
           $('#imageList').append('<li><img src=" '+ e.target.result +' " class="img-rounded temporary" /></li>');
@@ -112,6 +112,7 @@ jQuery.noConflict();
 
     drag : (evt) => {
       var style = window.getComputedStyle(event.target, null);
+      // Register 3 data on dataTransfer: left, top, id
       evt.dataTransfer.setData('text/plain',
         (parseInt(style.getPropertyValue("left"), 10) - event.clientX) + ','
         + (parseInt(style.getPropertyValue("top"), 10) - event.clientY)+ ','
@@ -128,17 +129,32 @@ jQuery.noConflict();
       evt.preventDefault();
       var data = evt.dataTransfer.getData('text/plain').split(',');
       var draggedEl = document.getElementById(data[2]);
+      evt.target.appendChild(draggedEl);
+      draggedEl.style.left = '0px';
+      draggedEl.style.top = '0px';
 
-      evt.target.appendChild(document.getElementById(data[2]));
-      draggedEl.style.left = (event.clientX + parseInt(data[0],10)) + 'px';
-      draggedEl.style.top = (event.clientY + parseInt(data[1], 10)) + 'px';
+    },
+
+    dropAndMove : (evt) => {
+      evt.preventDefault();
+      var data = evt.dataTransfer.getData('text/plain').split(',');
+      var draggedEl = document.getElementById(data[2]);
+      // move the el, modifying its left and top position.
+      // Set max left and top.
+      evt.target.appendChild(draggedEl);
+      var left = event.clientX + parseInt(data[0],10) > 500 ? 500 : event.clientX + parseInt(data[0],10);
+      var top = event.clientY + parseInt(data[0],10) < 0 ? 0 : event.clientY + parseInt(data[0],10);
+
+      draggedEl.style.left = left + 'px';
+      draggedEl.style.top = top + 'px';
     },
 
     init : () => {
       var canvas = document.getElementById('droppableBox');
       var imgList = document.getElementById('imageList');
+      var textList = document.getElementById('textList');
+      var dragEl = document.querySelectorAll('.dragEl');
 
-      var dragEl = document.querySelectorAll('.dragImg');
       // set which element can be dragged
       for( var i = 0; i < dragEl.length; i++){
         dragEl[i].addEventListener('dragstart', function(evt){
@@ -151,18 +167,50 @@ jQuery.noConflict();
         app.dragAndDrop.allowDrag(evt);
       });
       imgList.addEventListener('dragover', function(evt){
+         app.dragAndDrop.allowDrag(evt);
+      });
+      textList.addEventListener('dragover', function(evt){
         app.dragAndDrop.allowDrag(evt);
       });
 
       // Allow canvas and imgList to accept droping elements
       canvas.addEventListener('drop', function(evt){
-        app.dragAndDrop.drop(evt);
+        app.dragAndDrop.dropAndMove(evt);
       });
       imgList.addEventListener('drop', function(evt){
         app.dragAndDrop.drop(evt);
       });
+      textList.addEventListener('drop', function(evt){
+        app.dragAndDrop.drop(evt);
+      });
     }
 
+  },
+
+  app.text = {
+    createText : () => {
+      // give ID to input based on index. First index would be -1, so i give +1 to all the index
+      var index = $('#textList li').index() < 0 ? 0 : $('#textList li').index() + 1;
+      $('#textList').append('<li><input type="text" class="dragEl" id="dragText'+index+'" draggable="true" /></li>');
+
+      // Add dragstart event to dinamycally created input
+      // NOTE: If i would have time, i would probably do this is a better way.
+      // I would probably abstact the 'dragstart' eventListener function and then call in app.text.createText
+      // and app.dragAndDrop.init with .bind()
+      var dragEl = document.querySelectorAll('.dragEl');
+      for( var i = 0; i < dragEl.length; i++){
+        dragEl[i].addEventListener('dragstart', function(evt){
+          app.dragAndDrop.drag(evt);
+        });
+      }
+    },
+
+    init : () => {
+      // Add text to text list when btn us clicked.
+      $('#addText').on('click', () => {
+        app.text.createText();
+      });
+    }
   }
 
   app.scroll = function()
@@ -183,6 +231,7 @@ jQuery.noConflict();
     //Functions for page ready
     app.upload.init();
     app.dragAndDrop.init();
+    app.text.init();
   }
 
     return app;
