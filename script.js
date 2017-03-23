@@ -31,9 +31,9 @@ jQuery.noConflict();
           $('#imageList').append('<li><img src="'+ imgLink +'" id="dragImg'+ i +'" class="img-rounded dragEl" draggable="true" /></li>');
 
           // Add dragstart event to dinamycally created images
-          // NOTE: If i would have time, i would probably do this is a better way.
-          // I would probably abstact the 'dragstart' eventListener function and then call in app.text.createText
-          // and app.dragAndDrop.init with .bind()
+          // NOTE: If i would have time, i would do this is in a better way.
+          // I would abstact the 'dragstart' eventListener function and then bind() app.text.createText
+          // and app.dragAndDrop.init with it.
           var dragEl = document.querySelectorAll('.dragEl');
           for( var i = 0; i < dragEl.length; i++){
             dragEl[i].addEventListener('dragstart', function(evt){
@@ -54,7 +54,7 @@ jQuery.noConflict();
   //Syntax Note: app.sectionName.functionName = function(args)
   app.upload = { //examples
 
-    uploadNewImg : (btn, newImgs, formData) => {
+    uploadNewImg : (newImgs, formData) => {
       // Validate file: empty, image's format, size
       if (newImgs.length === 0){
         $('.upload-error').text('You must upload an image before submit it.');
@@ -108,7 +108,7 @@ jQuery.noConflict();
         var files = fileEl.files;
         evt.preventDefault();
 
-        app.upload.uploadNewImg(this, files, formData);
+        app.upload.uploadNewImg(files, formData);
       })
     }
   }
@@ -123,7 +123,6 @@ jQuery.noConflict();
         + (parseInt(style.getPropertyValue("top"), 10) - event.clientY)+ ','
         + evt.target.id
       );
-
     },
 
     allowDrag : (evt) => {
@@ -131,6 +130,7 @@ jQuery.noConflict();
     },
 
     drop : (evt) => {
+      // Set back positions When elements are drag back on list div
       evt.preventDefault();
       var data = evt.dataTransfer.getData('text/plain').split(',');
       var draggedEl = document.getElementById(data[2]);
@@ -152,6 +152,10 @@ jQuery.noConflict();
 
       draggedEl.style.left = left + 'px';
       draggedEl.style.top = top + 'px';
+
+      // store element
+      var dataStorag = [left, top, data[2]];
+      app.storeSession.storeComposition(dataStorag);
     },
 
     init : () => {
@@ -200,8 +204,8 @@ jQuery.noConflict();
 
       // Add dragstart event to dinamycally created input
       // NOTE: If i would have time, i would probably do this is a better way.
-      // I would probably abstact the 'dragstart' eventListener function and then call in app.text.createText
-      // and app.dragAndDrop.init with .bind()
+      // I would probably abstact the 'dragstart' eventListener function and then bind() app.text.createText
+      // and app.dragAndDrop.init with it.
       var dragEl = document.querySelectorAll('.dragEl');
       for( var i = 0; i < dragEl.length; i++){
         dragEl[i].addEventListener('dragstart', function(evt){
@@ -211,11 +215,36 @@ jQuery.noConflict();
     },
 
     init : () => {
-      // Add text to text list when btn us clicked.
+      // Add text to textList when btn is clicked.
       $('#addText').on('click', () => {
         app.text.createText();
       });
     }
+  },
+
+  app.storeSession = {
+    storeComposition : (data) => {
+      sessionStorage.setItem(data[2], data)
+    },
+
+    showComposition : (data) => {
+      var canvas = document.getElementById('droppableBox');
+
+      // for each el stored, append to canvas and set positions
+      // NOTE: This approach works great if the element actually exist in the dom.
+      // If it doesn't, like the text, it will not work.
+      // I didn't have the time to dig more but i see two approach here:
+      // 1_ save input value and then re-create the input with that value inside (verbose)
+      // 2_ once created, save inputs (in a json or in array) and then fetch them here.
+      for ( var i = 0, len = sessionStorage.length; i < len; ++i ) {
+        var data = sessionStorage.getItem( sessionStorage.key( i ) );
+        var dragData = data.split(',');
+        var id = '#'+dragData[2];
+        $(canvas).append($(id));
+
+        $(id).css({'left': dragData[0]+'px', 'top': dragData[1]+'px'});
+      }
+    },
   }
 
   app.scroll = function()
@@ -234,6 +263,7 @@ jQuery.noConflict();
   app.init = function()
   {
     //Functions for page ready
+    app.storeSession.showComposition();
     app.upload.init();
     app.dragAndDrop.init();
     app.text.init();
